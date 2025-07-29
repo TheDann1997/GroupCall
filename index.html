@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Sala de Videollamada Manual v1</title>
+  <title>Sala de Videollamada v2</title>
   <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
   <style>
@@ -255,6 +255,9 @@
         <button class="btn btn-primary" id="joinSalaBtn">
           <i class="ph ph-sign-in"></i> Unirse a Sala
         </button>
+        <button class="btn btn-danger" id="debugBtn">
+          <i class="ph ph-bug"></i> Debug Comunicaci贸n
+        </button>
       </div>
       
       <div id="statusDiv" class="status disconnected">
@@ -320,6 +323,7 @@
     const toggleMic = document.getElementById('toggleMic');
     const toggleScreen = document.getElementById('toggleScreen');
     const endCallBtn = document.getElementById('endCallBtn');
+    const debugBtn = document.getElementById('debugBtn');
 
     // Funci贸n para actualizar estado
     function updateStatus(message, type = 'warning') {
@@ -403,6 +407,10 @@
         signalRConnection.on("SalaEliminada", (salaId) => {
           console.log(`Sala ${salaId} fue eliminada`);
           leaveRoom();
+        });
+
+        signalRConnection.on("DebugRecibirMensaje", (remitenteId, mensaje) => {
+          console.log(`馃悰 Debug: Recibido mensaje de ${remitenteId}: ${mensaje}`);
         });
 
         await signalRConnection.start();
@@ -793,6 +801,20 @@
     connectBtn.addEventListener('click', connectToSignalR);
     createSalaBtn.addEventListener('click', createSala);
     joinSalaBtn.addEventListener('click', joinSala);
+    debugBtn.addEventListener('click', debugComunicacion);
+
+    // Funci贸n de debug para probar comunicaci贸n
+    async function debugComunicacion() {
+      const otroUserId = prompt('Ingresa el ID del otro usuario para probar comunicaci贸n:');
+      if (otroUserId && signalRConnection && signalRConnection.state === "Connected") {
+        try {
+          await signalRConnection.invoke("DebugEnviarMensaje", otroUserId, `Hola desde ${localUserId} a las ${new Date().toLocaleTimeString()}`);
+          console.log(`Debug: Mensaje enviado a ${otroUserId}`);
+        } catch (err) {
+          console.error('Error en debug:', err);
+        }
+      }
+    }
 
     // Evento para cuando se cierra la p谩gina
     window.addEventListener('beforeunload', () => {
