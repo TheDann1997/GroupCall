@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Sala de Videollamada Manual</title>
+  <title>Sala de Videollamada Manual v1</title>
   <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
   <style>
@@ -231,9 +231,9 @@
 </head>
 <body>
   <div class="container">
-    <!-- Panel de configuración -->
+    <!-- Panel de configuraci贸n -->
     <div class="setup-panel" id="setupPanel">
-      <h2>🎥 Sala de Videollamada Manual</h2>
+      <h2>馃帴 Sala de Videollamada Manual</h2>
       
       <div class="input-group">
         <label for="userIdInput">Tu ID de Usuario:</label>
@@ -267,14 +267,14 @@
       <h3>Sala: <span id="currentSalaName"></span></h3>
       
       <div class="video-grid" id="videoGrid">
-        <!-- Los videos se agregarán dinámicamente aquí -->
+        <!-- Los videos se agregar谩n din谩micamente aqu铆 -->
       </div>
       
       <div class="controls-bar">
-        <button class="control-btn camera" id="toggleCamera" title="Cámara">
+        <button class="control-btn camera" id="toggleCamera" title="C谩mara">
           <i class="ph ph-camera"></i>
         </button>
-        <button class="control-btn mic" id="toggleMic" title="Micrófono">
+        <button class="control-btn mic" id="toggleMic" title="Micr贸fono">
           <i class="ph ph-microphone"></i>
         </button>
         <button class="control-btn screen" id="toggleScreen" title="Compartir Pantalla">
@@ -286,7 +286,7 @@
       </div>
       
       <div class="participants-list">
-        <h4>👥 Participantes</h4>
+        <h4>馃懃 Participantes</h4>
         <div id="participantsContainer"></div>
       </div>
     </div>
@@ -321,7 +321,7 @@
     const toggleScreen = document.getElementById('toggleScreen');
     const endCallBtn = document.getElementById('endCallBtn');
 
-    // Función para actualizar estado
+    // Funci贸n para actualizar estado
     function updateStatus(message, type = 'warning') {
       statusDiv.textContent = message;
       statusDiv.className = `status ${type}`;
@@ -348,7 +348,7 @@
         signalRConnection.on("SalaCreada", (salaId, creador) => {
           console.log(`Sala ${salaId} creada por ${creador}`);
           updateStatus(`Sala ${salaId} creada exitosamente`, 'connected');
-          // Entrar automáticamente a la sala creada
+          // Entrar autom谩ticamente a la sala creada
           enterRoom(salaId);
         });
 
@@ -358,13 +358,13 @@
         });
 
         signalRConnection.on("UsuarioUnidoASala", (salaId, userId, ofertaSDP) => {
-          console.log(`Usuario ${userId} se unió a la sala ${salaId}`);
+          console.log(`Usuario ${userId} se uni贸 a la sala ${salaId}`);
           handleUserJoined(userId, ofertaSDP);
         });
 
         signalRConnection.on("ParticipanteExistente", (salaId, userId) => {
           console.log(`Participante existente: ${userId} en sala ${salaId}`);
-          // Aquí podrías manejar participantes existentes
+          // Aqu铆 podr铆as manejar participantes existentes
         });
 
         signalRConnection.on("EnviarOfertasAExistentes", async (salaId, participantesIds) => {
@@ -396,7 +396,7 @@
         });
 
         signalRConnection.on("UsuarioSalioDeSala", (salaId, userId) => {
-          console.log(`Usuario ${userId} salió de la sala ${salaId}`);
+          console.log(`Usuario ${userId} sali贸 de la sala ${salaId}`);
           removeParticipant(userId);
         });
 
@@ -414,7 +414,7 @@
         
       } catch (err) {
         console.error('Error conectando a SignalR:', err);
-        updateStatus('Error de conexión: ' + err.message, 'disconnected');
+        updateStatus('Error de conexi贸n: ' + err.message, 'disconnected');
       }
     }
 
@@ -461,8 +461,8 @@
         await signalRConnection.invoke("UnirseASala", salaId, localUserId);
         enterRoom(salaId);
       } catch (err) {
-        console.error('Error uniéndose a sala:', err);
-        updateStatus('Error uniéndose a sala: ' + err.message, 'disconnected');
+        console.error('Error uni茅ndose a sala:', err);
+        updateStatus('Error uni茅ndose a sala: ' + err.message, 'disconnected');
       }
     }
 
@@ -476,7 +476,7 @@
         localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         
         // Crear video local
-        localVideoElement = createVideoElement(localUserId, 'Tú');
+        localVideoElement = createVideoElement(localUserId, 'T煤');
         localVideoElement.srcObject = localStream;
         localVideoElement.muted = true; // Silenciar audio local
 
@@ -491,45 +491,64 @@
         
       } catch (err) {
         console.error('Error obteniendo medios:', err);
-        updateStatus('Error accediendo a cámara/micrófono: ' + err.message, 'disconnected');
+        updateStatus('Error accediendo a c谩mara/micr贸fono: ' + err.message, 'disconnected');
       }
     }
 
-    // Crear conexión peer
+    // Crear conexi贸n peer
     function createPeerConnection(userId) {
+      console.log(`馃敆 Creando conexi贸n peer para ${userId}`);
       const pc = new RTCPeerConnection({
         iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
       });
 
       pc.onicecandidate = event => {
         if (event.candidate) {
+          console.log(`馃 Enviando candidato ICE a ${userId}`);
           signalRConnection.invoke("EnviarIceCandidateSala", salaId, userId, JSON.stringify(event.candidate));
         }
       };
 
       pc.ontrack = event => {
-        console.log(`🎬 Recibido stream de ${userId}`, event.streams);
+        console.log(`馃幀 Recibido stream de ${userId}`, event.streams);
         if (event.streams && event.streams.length > 0) {
-          const videoElement = createVideoElement(userId, `Usuario ${userId}`);
-          videoElement.srcObject = event.streams[0];
-          participants.set(userId, {
-            name: `Usuario ${userId}`,
-            stream: event.streams[0],
-            videoElement: videoElement,
-            pc: pc
-          });
-          console.log(`✅ Video creado para ${userId}`);
-          updateParticipantsList();
+          // Verificar si ya existe este participante
+          if (participants.has(userId)) {
+            console.log(`鈿狅笍 Participante ${userId} ya existe, actualizando stream`);
+            const participante = participants.get(userId);
+            participante.videoElement.srcObject = event.streams[0];
+            participante.stream = event.streams[0];
+          } else {
+            console.log(`鉁?Agregando nuevo participante ${userId}`);
+            const videoElement = createVideoElement(userId, `Usuario ${userId}`);
+            videoElement.srcObject = event.streams[0];
+            participants.set(userId, {
+              name: `Usuario ${userId}`,
+              stream: event.streams[0],
+              videoElement: videoElement,
+              pc: pc
+            });
+            updateParticipantsList();
+          }
         } else {
-          console.warn(`⚠️ No hay streams en el evento ontrack de ${userId}`);
+          console.warn(`鈿狅笍 No hay streams en el evento ontrack de ${userId}`);
         }
       };
 
       pc.onconnectionstatechange = () => {
+        console.log(`馃敆 Estado de conexi贸n con ${userId}: ${pc.connectionState}`);
         if (["disconnected", "closed", "failed"].includes(pc.connectionState)) {
-          console.log(`Conexión con ${userId} perdida`);
+          console.log(`鉂?Conexi贸n con ${userId} perdida`);
           removeParticipant(userId);
         }
+      };
+
+      pc.oniceconnectionstatechange = () => {
+        console.log(`馃 Estado ICE con ${userId}: ${pc.iceConnectionState}`);
+      };
+
+      pc.onsignalingstatechange = () => {
+        console.log(`馃摗 Estado de se帽alizaci贸n con ${userId}: ${pc.signalingState}`);
       };
 
       return pc;
@@ -537,6 +556,14 @@
 
     // Crear elemento de video
     function createVideoElement(userId, name) {
+      // Verificar si ya existe un video para este usuario
+      const existingContainer = document.getElementById(`video-${userId}`);
+      if (existingContainer) {
+        console.log(`鈿狅笍 Video ya existe para ${userId}, reutilizando`);
+        return existingContainer.querySelector('video');
+      }
+
+      console.log(`馃幀 Creando nuevo video para ${userId}`);
       const container = document.createElement('div');
       container.className = 'video-container';
       container.id = `video-${userId}`;
@@ -558,87 +585,104 @@
 
     // Manejar usuario unido
     async function handleUserJoined(userId, ofertaSDP) {
-      console.log(`Nuevo usuario ${userId} se unió, enviando oferta`);
+      console.log(`Nuevo usuario ${userId} se uni贸, enviando oferta`);
       await enviarOfertaA(userId);
     }
 
     // Manejar oferta
     async function handleOffer(userId, ofertaSDP) {
-      console.log(`📥 Recibida oferta de ${userId}, procesando...`);
+      console.log(`馃摜 Recibida oferta de ${userId}, procesando...`);
       let pc = peerConnections.get(userId);
       if (!pc) {
-        console.log(`📡 Creando nueva conexión peer para ${userId} (desde handleOffer)`);
+        console.log(`馃摗 Creando nueva conexi贸n peer para ${userId} (desde handleOffer)`);
         pc = createPeerConnection(userId);
         peerConnections.set(userId, pc);
 
         if (localStream) {
-          console.log(`🎥 Agregando tracks locales a la conexión con ${userId} (desde handleOffer)`);
+          console.log(`馃帴 Agregando tracks locales a la conexi贸n con ${userId} (desde handleOffer)`);
           localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
         } else {
-          console.warn(`⚠️ No hay localStream disponible para ${userId} (desde handleOffer)`);
+          console.warn(`鈿狅笍 No hay localStream disponible para ${userId} (desde handleOffer)`);
         }
       }
 
       try {
-        console.log(`🔄 Estableciendo descripción remota para ${userId}`);
+        console.log(`馃攧 Estableciendo descripci贸n remota para ${userId}`);
         await pc.setRemoteDescription(new RTCSessionDescription(JSON.parse(ofertaSDP)));
-        console.log(`✅ Descripción remota establecida para ${userId}`);
+        console.log(`鉁?Descripci贸n remota establecida para ${userId}`);
         
-        console.log(`🔄 Creando respuesta para ${userId}`);
+        console.log(`馃攧 Creando respuesta para ${userId}`);
         const respuesta = await pc.createAnswer();
         await pc.setLocalDescription(respuesta);
-        console.log(`✅ Respuesta creada y establecida para ${userId}`);
+        console.log(`鉁?Respuesta creada y establecida para ${userId}`);
 
-        console.log(`📤 Enviando respuesta a ${userId}`);
+        console.log(`馃摛 Enviando respuesta a ${userId}`);
         signalRConnection.invoke("EnviarRespuestaSala", salaId, userId, JSON.stringify(respuesta));
-        console.log(`✅ Respuesta enviada a ${userId}`);
+        console.log(`鉁?Respuesta enviada a ${userId}`);
       } catch (err) {
-        console.error(`❌ Error procesando oferta de ${userId}:`, err);
+        console.error(`鉂?Error procesando oferta de ${userId}:`, err);
       }
     }
 
     // Manejar respuesta
     async function handleAnswer(userId, respuestaSDP) {
+      console.log(`馃摜 Recibida respuesta de ${userId}, procesando...`);
       const pc = peerConnections.get(userId);
       if (pc) {
-        await pc.setRemoteDescription(new RTCSessionDescription(JSON.parse(respuestaSDP)));
+        try {
+          console.log(`馃攧 Estableciendo descripci贸n remota (respuesta) para ${userId}`);
+          await pc.setRemoteDescription(new RTCSessionDescription(JSON.parse(respuestaSDP)));
+          console.log(`鉁?Respuesta procesada correctamente para ${userId}`);
+        } catch (err) {
+          console.error(`鉂?Error procesando respuesta de ${userId}:`, err);
+        }
+      } else {
+        console.warn(`鈿狅笍 No se encontr贸 conexi贸n peer para ${userId} al procesar respuesta`);
       }
     }
 
     // Manejar candidato ICE
     async function handleIceCandidate(userId, candidato) {
+      console.log(`馃 Recibido candidato ICE de ${userId}`);
       const pc = peerConnections.get(userId);
       if (pc && pc.remoteDescription) {
-        await pc.addIceCandidate(new RTCIceCandidate(JSON.parse(candidato)));
+        try {
+          await pc.addIceCandidate(new RTCIceCandidate(JSON.parse(candidato)));
+          console.log(`鉁?Candidato ICE agregado para ${userId}`);
+        } catch (err) {
+          console.error(`鉂?Error agregando candidato ICE de ${userId}:`, err);
+        }
+      } else {
+        console.warn(`鈿狅笍 No se puede agregar candidato ICE para ${userId} - conexi贸n no lista`);
       }
     }
 
-    // Enviar oferta a un participante específico
+    // Enviar oferta a un participante espec铆fico
     async function enviarOfertaA(userId) {
       try {
-        console.log(`🔄 Enviando oferta a ${userId}...`);
+        console.log(`馃攧 Enviando oferta a ${userId}...`);
         let pc = peerConnections.get(userId);
         if (!pc) {
-          console.log(`📡 Creando nueva conexión peer para ${userId}`);
+          console.log(`馃摗 Creando nueva conexi贸n peer para ${userId}`);
           pc = createPeerConnection(userId);
           peerConnections.set(userId, pc);
 
           if (localStream) {
-            console.log(`🎥 Agregando tracks locales a la conexión con ${userId}`);
+            console.log(`馃帴 Agregando tracks locales a la conexi贸n con ${userId}`);
             localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
           } else {
-            console.warn(`⚠️ No hay localStream disponible para ${userId}`);
+            console.warn(`鈿狅笍 No hay localStream disponible para ${userId}`);
           }
         }
 
         const oferta = await pc.createOffer();
         await pc.setLocalDescription(oferta);
 
-        console.log(`📤 Invocando EnviarOfertaSala para ${userId}`);
+        console.log(`馃摛 Invocando EnviarOfertaSala para ${userId}`);
         signalRConnection.invoke("EnviarOfertaSala", salaId, userId, JSON.stringify(oferta));
-        console.log(`✅ Oferta enviada a ${userId}`);
+        console.log(`鉁?Oferta enviada a ${userId}`);
       } catch (err) {
-        console.error(`❌ Error enviando oferta a ${userId}:`, err);
+        console.error(`鉂?Error enviando oferta a ${userId}:`, err);
       }
     }
 
@@ -680,7 +724,7 @@
       participants.clear();
       updateParticipantsList();
 
-      // Mostrar panel de configuración
+      // Mostrar panel de configuraci贸n
       videoRoom.classList.remove('active');
       setupPanel.style.display = 'block';
       
@@ -696,7 +740,7 @@
       localItem.className = 'participant-item';
       localItem.innerHTML = `
         <div class="status-indicator"></div>
-        <span>Tú (${localUserId})</span>
+        <span>T煤 (${localUserId})</span>
       `;
       participantsContainer.appendChild(localItem);
 
@@ -714,6 +758,7 @@
 
     // Actualizar lista de participantes desde el servidor
     function actualizarListaParticipantes(participantes) {
+      console.log(`馃搵 Actualizando lista de participantes:`, participantes);
       participantsContainer.innerHTML = '';
       
       // Agregar participante local
@@ -721,13 +766,15 @@
       localItem.className = 'participant-item';
       localItem.innerHTML = `
         <div class="status-indicator"></div>
-        <span>Tú (${localUserId})</span>
+        <span>T煤 (${localUserId})</span>
       `;
       participantsContainer.appendChild(localItem);
 
-      // Agregar participantes del servidor
+      // Agregar participantes del servidor (excluyendo al usuario local)
+      const participantesUnicos = new Set();
       participantes.forEach(participante => {
-        if (participante.UsuarioId !== localUserId) {
+        if (participante.UsuarioId !== localUserId && !participantesUnicos.has(participante.UsuarioId)) {
+          participantesUnicos.add(participante.UsuarioId);
           const item = document.createElement('div');
           item.className = 'participant-item';
           item.innerHTML = `
@@ -735,8 +782,11 @@
             <span>Usuario ${participante.UsuarioId}</span>
           `;
           participantsContainer.appendChild(item);
+          console.log(`馃懁 Agregado participante: ${participante.UsuarioId}`);
         }
       });
+      
+      console.log(`馃搳 Total participantes en lista: ${participantesUnicos.size + 1} (incluyendo local)`);
     }
 
     // Event listeners
@@ -744,7 +794,7 @@
     createSalaBtn.addEventListener('click', createSala);
     joinSalaBtn.addEventListener('click', joinSala);
 
-    // Evento para cuando se cierra la página
+    // Evento para cuando se cierra la p谩gina
     window.addEventListener('beforeunload', () => {
       if (signalRConnection && signalRConnection.state === "Connected" && salaId && localUserId) {
         signalRConnection.invoke("SalirDeSala", salaId, localUserId);
@@ -773,7 +823,7 @@
 
     endCallBtn.addEventListener('click', leaveRoom);
 
-    // Inicialización
+    // Inicializaci贸n
     console.log('Sala de videollamada manual cargada');
     updateStatus('Listo para conectar', 'disconnected');
   </script>
