@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Videollamada v7</title>
+  <title>Videollamada Manual v8</title>
   <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
   <style>
@@ -310,16 +310,16 @@
       
       <div class="controls-bar">
         <button class="control-btn camera" id="toggleCamera" title="Cámara">
-          <i class="ph ph-camera"></i>
+          <i class="ph ph-camera-slash"></i>
         </button>
         <button class="control-btn mic" id="toggleMic" title="Micrófono">
-          <i class="ph ph-microphone"></i>
+          <i class="ph ph-microphone-slash"></i>
         </button>
         <button class="control-btn screen" id="toggleScreen" title="Compartir Pantalla">
-          <i class="ph ph-monitor"></i>
+          <i class="ph ph-monitor-play"></i>
         </button>
         <button class="control-btn end-call" id="endCallBtn" title="Terminar Llamada">
-          <i class="ph ph-phone-disconnect"></i>
+          <i class="ph ph-phone-slash"></i>
         </button>
       </div>
       
@@ -571,6 +571,9 @@
         }
         
         updateStatus(`En sala: ${salaId}`, 'connected');
+
+        // Inicializar iconos de controles
+        initializeControlIcons();
 
         // Obtener lista de participantes y enviar ofertas automáticamente
         await signalRConnection.invoke("ObtenerParticipantesSala", salaId);
@@ -1109,6 +1112,14 @@
           videoTrack.enabled = !videoTrack.enabled;
           toggleCamera.classList.toggle('muted', !videoTrack.enabled);
           
+          // Cambiar el icono según el estado
+          const cameraIcon = toggleCamera.querySelector('i');
+          if (videoTrack.enabled) {
+            cameraIcon.className = 'ph ph-camera';
+          } else {
+            cameraIcon.className = 'ph ph-camera-slash';
+          }
+          
           // Notificar a otros participantes sobre el cambio de estado
           if (signalRConnection && signalRConnection.state === "Connected" && salaId) {
             signalRConnection.invoke("NotificarCambioEstado", salaId, localUserId, "camera", videoTrack.enabled);
@@ -1128,6 +1139,14 @@
         if (audioTrack) {
           audioTrack.enabled = !audioTrack.enabled;
           toggleMic.classList.toggle('muted', !audioTrack.enabled);
+          
+          // Cambiar el icono según el estado
+          const micIcon = toggleMic.querySelector('i');
+          if (audioTrack.enabled) {
+            micIcon.className = 'ph ph-microphone';
+          } else {
+            micIcon.className = 'ph ph-microphone-slash';
+          }
           
           // Notificar a otros participantes sobre el cambio de estado
           if (signalRConnection && signalRConnection.state === "Connected" && salaId) {
@@ -1171,6 +1190,11 @@
             
             isScreenSharing = true;
             toggleScreen.classList.add('active');
+            
+            // Cambiar el icono cuando está compartiendo
+            const screenIcon = toggleScreen.querySelector('i');
+            screenIcon.className = 'ph ph-monitor-stop';
+            
             updateStatus('Compartiendo pantalla', 'connected');
             
             // Notificar a otros participantes
@@ -1221,6 +1245,11 @@
       
       isScreenSharing = false;
       toggleScreen.classList.remove('active');
+      
+      // Restaurar el icono cuando no está compartiendo
+      const screenIcon = toggleScreen.querySelector('i');
+      screenIcon.className = 'ph ph-monitor-play';
+      
       updateStatus('Pantalla compartida detenida', 'connected');
       
       // Notificar a otros participantes
@@ -1233,6 +1262,25 @@
     }
 
     endCallBtn.addEventListener('click', leaveRoom);
+
+    // Función para inicializar iconos de controles
+    function initializeControlIcons() {
+      // Inicializar icono de cámara (por defecto activada)
+      const cameraIcon = toggleCamera.querySelector('i');
+      cameraIcon.className = 'ph ph-camera';
+      
+      // Inicializar icono de micrófono (por defecto activado)
+      const micIcon = toggleMic.querySelector('i');
+      micIcon.className = 'ph ph-microphone';
+      
+      // Inicializar icono de pantalla (por defecto no compartiendo)
+      const screenIcon = toggleScreen.querySelector('i');
+      screenIcon.className = 'ph ph-monitor-play';
+      
+      // Inicializar icono de terminar llamada
+      const endCallIcon = endCallBtn.querySelector('i');
+      endCallIcon.className = 'ph ph-phone-slash';
+    }
 
     // Inicialización
     console.log('Sala de videollamada manual cargada');
