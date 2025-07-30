@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Videollamada v6.2</title>
+  <title>Videollamada v7</title>
   <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
   <style>
@@ -704,30 +704,61 @@
         console.log(`📡 Creando nueva conexión peer para ${userId} (desde handleOffer)`);
         pc = createPeerConnection(userId);
         peerConnections.set(userId, pc);
-
-        console.log(`🎥 Agregando tracks locales a la conexión con ${userId} (desde handleOffer)`);
-        localStream.getTracks().forEach(track => {
-          console.log(`🎬 Agregando track: ${track.kind} - enabled: ${track.enabled}`);
-          pc.addTrack(track, localStream);
-        });
       }
 
       try {
+        // Verificar el estado actual de la conexión
+        console.log(`🔍 Estado actual de conexión con ${userId}:`, pc.signalingState);
+        
+        // Si la conexión ya tiene una descripción local, no podemos crear una respuesta
+        if (pc.signalingState !== 'stable' && pc.localDescription) {
+          console.warn(`⚠️ Conexión con ${userId} no está en estado estable, ignorando oferta`);
+          return;
+        }
+
+        // Agregar tracks locales si no se han agregado aún
+        if (pc.getSenders().length === 0) {
+          console.log(`🎥 Agregando tracks locales a la conexión con ${userId} (desde handleOffer)`);
+          localStream.getTracks().forEach(track => {
+            console.log(`🎬 Agregando track: ${track.kind} - enabled: ${track.enabled}`);
+            pc.addTrack(track, localStream);
+          });
+        }
+
         console.log(`🔄 Estableciendo descripción remota para ${userId}`);
         const remoteDesc = new RTCSessionDescription(JSON.parse(ofertaSDP));
         console.log(`📋 Descripción remota:`, remoteDesc);
         await pc.setRemoteDescription(remoteDesc);
         console.log(`✅ Descripción remota establecida para ${userId}`);
         
-        console.log(`🔄 Creando respuesta para ${userId}`);
-        const respuesta = await pc.createAnswer();
-        console.log(`📋 Respuesta creada:`, respuesta);
-        await pc.setLocalDescription(respuesta);
-        console.log(`✅ Respuesta creada y establecida para ${userId}`);
+        // Procesar candidatos ICE pendientes si los hay
+        if (pc.pendingCandidates && pc.pendingCandidates.length > 0) {
+          console.log(`🔄 Procesando ${pc.pendingCandidates.length} candidatos ICE pendientes para ${userId}`);
+          for (const candidate of pc.pendingCandidates) {
+            try {
+              await pc.addIceCandidate(candidate);
+              console.log(`✅ Candidato ICE pendiente agregado para ${userId}`);
+            } catch (err) {
+              console.error(`❌ Error agregando candidato ICE pendiente:`, err);
+            }
+          }
+          pc.pendingCandidates = [];
+        }
+        
+        // Verificar que ahora podemos crear una respuesta
+        if (pc.signalingState === 'have-remote-offer') {
+          console.log(`🔄 Creando respuesta para ${userId}`);
+          const respuesta = await pc.createAnswer();
+          console.log(`📋 Respuesta creada:`, respuesta);
+          await pc.setLocalDescription(respuesta);
+          console.log(`✅ Respuesta creada y establecida para ${userId}`);
 
-        console.log(`📤 Enviando respuesta a ${userId}`);
-        await signalRConnection.invoke("EnviarRespuestaSala", salaId, userId, JSON.stringify(respuesta));
-        console.log(`✅ Respuesta enviada a ${userId}`);
+          console.log(`📤 Enviando respuesta a ${userId}`);
+          await signalRConnection.invoke("EnviarRespuestaSala", salaId, userId, JSON.stringify(respuesta));
+          console.log(`✅ Respuesta enviada a ${userId}`);
+        } else {
+          console.warn(`⚠️ Estado de señalización incorrecto para crear respuesta: ${pc.signalingState}`);
+        }
       } catch (err) {
         console.error(`❌ Error procesando oferta de ${userId}:`, err);
         updateStatus(`Error procesando oferta: ${err.message}`, 'disconnected');
@@ -743,6 +774,20 @@
           console.log(`🔄 Estableciendo descripción remota (respuesta) para ${userId}`);
           await pc.setRemoteDescription(new RTCSessionDescription(JSON.parse(respuestaSDP)));
           console.log(`✅ Respuesta procesada correctamente para ${userId}`);
+          
+          // Procesar candidatos ICE pendientes si los hay
+          if (pc.pendingCandidates && pc.pendingCandidates.length > 0) {
+            console.log(`🔄 Procesando ${pc.pendingCandidates.length} candidatos ICE pendientes para ${userId}`);
+            for (const candidate of pc.pendingCandidates) {
+              try {
+                await pc.addIceCandidate(candidate);
+                console.log(`✅ Candidato ICE pendiente agregado para ${userId}`);
+              } catch (err) {
+                console.error(`❌ Error agregando candidato ICE pendiente:`, err);
+              }
+            }
+            pc.pendingCandidates = [];
+          }
         } catch (err) {
           console.error(`❌ Error procesando respuesta de ${userId}:`, err);
         }
@@ -755,8 +800,18 @@
     async function handleIceCandidate(userId, candidato) {
       console.log(`🧊 Recibido candidato ICE de ${userId}`);
       const pc = peerConnections.get(userId);
-      if (pc && pc.remoteDescription) {
+      if (pc) {
         try {
+          // Si no hay descripción remota aún, guardar el candidato para más tarde
+          if (!pc.remoteDescription) {
+            console.log(`⏳ Descripción remota no lista para ${userId}, guardando candidato ICE`);
+            if (!pc.pendingCandidates) {
+              pc.pendingCandidates = [];
+            }
+            pc.pendingCandidates.push(new RTCIceCandidate(JSON.parse(candidato)));
+            return;
+          }
+
           await pc.addIceCandidate(new RTCIceCandidate(JSON.parse(candidato)));
           console.log(`✅ Candidato ICE agregado para ${userId}`);
         } catch (err) {
@@ -795,7 +850,27 @@
           console.log(`📡 Creando nueva conexión peer para ${userId}`);
           pc = createPeerConnection(userId);
           peerConnections.set(userId, pc);
+        }
 
+        // Verificar el estado de la conexión
+        console.log(`🔍 Estado actual de conexión con ${userId}:`, pc.signalingState);
+        
+        // Si la conexión no está en estado estable, esperar un poco
+        if (pc.signalingState !== 'stable') {
+          console.warn(`⚠️ Conexión con ${userId} no está en estado estable (${pc.signalingState}), esperando...`);
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          // Si aún no está estable, crear una nueva conexión
+          if (pc.signalingState !== 'stable') {
+            console.log(`🔄 Creando nueva conexión peer para ${userId} (reemplazando conexión inestable)`);
+            pc.close();
+            pc = createPeerConnection(userId);
+            peerConnections.set(userId, pc);
+          }
+        }
+
+        // Agregar tracks locales si no se han agregado aún
+        if (pc.getSenders().length === 0) {
           console.log(`🎥 Agregando tracks locales a la conexión con ${userId}`);
           localStream.getTracks().forEach(track => {
             console.log(`🎬 Agregando track: ${track.kind} - enabled: ${track.enabled}`);
@@ -818,6 +893,16 @@
         setTimeout(() => {
           if (pc.signalingState !== 'stable') {
             console.warn(`⚠️ Timeout: La conexión con ${userId} no se estableció correctamente`);
+            
+            // Reintentar la oferta después de un delay
+            setTimeout(async () => {
+              console.log(`🔄 Reintentando oferta para ${userId}...`);
+              try {
+                await enviarOfertaA(userId);
+              } catch (retryErr) {
+                console.error(`❌ Error en reintento para ${userId}:`, retryErr);
+              }
+            }, 2000);
           }
         }, 10000);
         
@@ -829,10 +914,19 @@
 
     // Remover participante
     function removeParticipant(userId) {
+      console.log(`🗑️ Removiendo participante ${userId}`);
+      
       const pc = peerConnections.get(userId);
       if (pc) {
+        // Limpiar candidatos pendientes
+        if (pc.pendingCandidates) {
+          pc.pendingCandidates = [];
+        }
+        
+        // Cerrar la conexión
         pc.close();
         peerConnections.delete(userId);
+        console.log(`✅ Conexión peer cerrada para ${userId}`);
       }
 
       const participante = participants.get(userId);
@@ -840,10 +934,12 @@
         const container = participante.videoElement.parentElement;
         if (container) {
           container.remove();
+          console.log(`✅ Video removido para ${userId}`);
         }
       }
       participants.delete(userId);
       updateParticipantsList();
+      console.log(`✅ Participante ${userId} removido completamente`);
     }
 
     // Salir de la sala
